@@ -234,15 +234,16 @@ class CharacterVAE:
         z_mean = layers.Dense(self.latent_dim, name="z_mean")(x)
         z_log_var = layers.Dense(self.latent_dim, name="z_log_var")(x)
         
-        # Sampling layer
-        def sampling(args):
-            z_mean, z_log_var = args
-            batch = tf.shape(z_mean)[0]
-            dim = tf.shape(z_mean)[1]
-            epsilon = tf.keras.backend.random_normal(shape=(batch, dim))
-            return z_mean + tf.exp(0.5 * z_log_var) * epsilon
+        # Sampling layer as a custom layer
+        class Sampling(layers.Layer):
+            def call(self, inputs):
+                z_mean, z_log_var = inputs
+                batch = tf.shape(z_mean)[0]
+                dim = tf.shape(z_mean)[1]
+                epsilon = tf.keras.backend.random_normal(shape=(batch, dim))
+                return z_mean + tf.exp(0.5 * z_log_var) * epsilon
         
-        z = layers.Lambda(sampling, output_shape=(self.latent_dim,), name="z")([z_mean, z_log_var])
+        z = Sampling(name="z")([z_mean, z_log_var])
         
         # Create encoder model
         self.encoder = keras.Model(inputs, [z_mean, z_log_var, z], name="encoder")
